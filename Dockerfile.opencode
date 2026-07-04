@@ -1,0 +1,13 @@
+FROM registry.redhat.io/devspaces/udi-rhel8:latest
+
+USER root
+
+# Install OpenCode CLI (AI coding agent)
+RUN curl -fsSL https://opencode.ai/install | OPENCODE_VERSION=1.15.13 bash && \
+    cp /home/user/.opencode/bin/opencode /usr/local/bin/opencode && \
+    chmod 755 /usr/local/bin/opencode
+
+# Accept self-signed TLS certs for cluster-internal endpoints
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+
+USER 1001

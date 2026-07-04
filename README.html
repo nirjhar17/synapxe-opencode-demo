@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synapxe Private AI Coding Assistant - Deployment Guide</title>
+<style>
+  :root {
+    --rh-red: #EE0000;
+    --rh-dark: #1a1a1a;
+    --rh-gray: #f5f5f5;
+    --rh-blue: #0066cc;
+    --rh-green: #3e8635;
+    --rh-orange: #f0ab00;
+    --rh-border: #d2d2d2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Red Hat Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.7;
+    color: #333;
+    background: #fff;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+  .header {
+    background: var(--rh-dark);
+    color: white;
+    padding: 40px 32px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 16px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+  .header .badge {
+    display: inline-block;
+    background: var(--rh-red);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .header .badge.green { background: var(--rh-green); }
+  .header .badge.orange { background: var(--rh-orange); color: #333; }
+  .header .badge.blue { background: var(--rh-blue); }
+  h2 {
+    font-size: 22px;
+    color: var(--rh-dark);
+    margin: 32px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--rh-red);
+  }
+  h3 {
+    font-size: 17px;
+    color: #444;
+    margin: 20px 0 10px;
+  }
+  .card {
+    background: var(--rh-gray);
+    border: 1px solid var(--rh-border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .card.success { border-left: 4px solid var(--rh-green); }
+  .card.warning { border-left: 4px solid var(--rh-orange); }
+  .card.info { border-left: 4px solid var(--rh-blue); }
+  .card.error { border-left: 4px solid var(--rh-red); }
+  .card-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 12px 0;
+  }
+  code {
+    background: #e8e8e8;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+  .arch-diagram {
+    background: #f8f9fa;
+    border: 1px solid var(--rh-border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--rh-dark);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rh-border);
+  }
+  tr:nth-child(even) { background: var(--rh-gray); }
+  .status { font-weight: 600; }
+  .status.done { color: var(--rh-green); }
+  .status.progress { color: var(--rh-orange); }
+  .status.pending { color: #888; }
+  .step-list { list-style: none; padding: 0; }
+  .step-list li {
+    padding: 12px 16px;
+    margin: 8px 0;
+    background: var(--rh-gray);
+    border-radius: 6px;
+    border-left: 4px solid var(--rh-border);
+  }
+  .step-list li.done { border-left-color: var(--rh-green); }
+  .step-list li.progress { border-left-color: var(--rh-orange); }
+  .step-list li.pending { border-left-color: #ccc; }
+  .step-num {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--rh-dark);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+  .step-list li.done .step-num { background: var(--rh-green); }
+  .step-list li.progress .step-num { background: var(--rh-orange); }
+  .step-list li.pending .step-num { background: #ccc; }
+  .learning-box {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .learning-box ul { margin-left: 20px; margin-top: 8px; }
+  .learning-box li { margin-bottom: 6px; }
+  .footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rh-border);
+    color: #888;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Synapxe Private AI Coding Assistant</h1>
+  <div class="subtitle">Zero Data Egress Agentic Application on OpenShift</div>
+  <span class="badge">ROSA HCP 4.21</span>
+  <span class="badge green">RHOAI 3.3</span>
+  <span class="badge blue">Qwen3-Coder-30B</span>
+  <span class="badge orange">July 3, 2026</span>
+</div>
+
+<h2>Objective</h2>
+<p>
+  Deploy a production-grade Private AI Coding Assistant on ROSA, combining
+  <a href="https://github.com/manujoy7/Private_AI_Coding_Assistant">Manu Joy's architecture</a>
+  with our custom agentic skills (reports, documents, slides) and MCP configurations.
+  The solution uses internally hosted open-weight models with zero data egress for
+  Synapxe's enterprise requirements.
+</p>
+
+<h2>Architecture</h2>
+<div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│  ROSA Cluster (AWS us-east-2)                                       │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Namespace: ai-serving                                       │   │
+│  │                                                              │   │
+│  │  ┌─────────────┐    ┌──────────────┐    ┌────────────────┐  │   │
+│  │  │  llm-d      │    │  HTTPRoute   │    │  vLLM Pod      │  │   │
+│  │  │  Gateway    │───▶│  qwen3-coder │───▶│  Qwen3-Coder   │  │   │
+│  │  │  (Envoy)    │    │  -kserve-    │    │  -30B FP8      │  │   │
+│  │  │             │    │  route       │    │  (L40S GPU)    │  │   │
+│  │  └─────────────┘    └──────────────┘    └───────┬────────┘  │   │
+│  │        ▲                                        │           │   │
+│  │        │                                  ┌─────▼────────┐  │   │
+│  │   TLS Secret                              │  model-cache │  │   │
+│  │   (self-signed)                           │  PVC 100Gi   │  │   │
+│  │                                           └──────────────┘  │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌──────────────────────┐    ┌──────────────────────────────────┐   │
+│  │  Dev Spaces (planned)│    │  GPU Node: g6e.2xlarge           │   │
+│  │  + OpenCode          │    │  NVIDIA L40S 48GB VRAM           │   │
+│  │  + Custom Skills     │    │  GPU Operator + ClusterPolicy    │   │
+│  └──────────────────────┘    └──────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h2>Technology Stack</h2>
+<table>
+  <tr><th>Component</th><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Platform</td><td>ROSA HCP 4.21</td><td>Managed OpenShift on AWS</td></tr>
+  <tr><td>AI Platform</td><td>OpenShift AI (RHOAI) 3.3</td><td>ML/AI lifecycle management</td></tr>
+  <tr><td>Model Serving</td><td>KServe (Headed) + llm-d</td><td>LLM inference with intelligent routing</td></tr>
+  <tr><td>Inference Engine</td><td>vLLM with FP8</td><td>Fast LLM inference, tool calling, reasoning</td></tr>
+  <tr><td>Model</td><td>Qwen3-Coder-30B-A3B-Instruct-FP8</td><td>Open-weight coding model</td></tr>
+  <tr><td>GPU</td><td>NVIDIA L40S (g6e.2xlarge)</td><td>48GB VRAM for model serving</td></tr>
+  <tr><td>Gateway</td><td>llm-d Gateway (Envoy)</td><td>TLS-terminated ingress for model API</td></tr>
+  <tr><td>IDE (planned)</td><td>Dev Spaces + OpenCode</td><td>Browser-based AI coding agent</td></tr>
+  <tr><td>Skills (planned)</td><td>Custom agent skills</td><td>Reports, documents, slides generation</td></tr>
+</table>
+
+<h2>Deployment Progress</h2>
+<ul class="step-list">
+  <li class="done">
+    <span class="step-num">1</span>
+    <strong>GPU Machine Pool</strong> &mdash;
+    Created <code>gpu-l40s</code> machinepool with <code>g6e.2xlarge</code> instance.
+    Node joined cluster with NVIDIA L40S GPU.
+  </li>
+  <li class="done">
+    <span class="step-num">2</span>
+    <strong>NVIDIA GPU Operator + ClusterPolicy</strong> &mdash;
+    Installed GPU Operator and NFD. Applied ClusterPolicy CR for driver, device plugin,
+    toolkit, DCGM exporter, and MIG manager.
+  </li>
+  <li class="done">
+    <span class="step-num">3</span>
+    <strong>Model Serving (Qwen3 on vLLM + llm-d)</strong> &mdash;
+    Patched KServe to Headed mode. Created namespace, PVC, HF token, TLS secret,
+    Gateway, and LLMInferenceService. Model running and Ready: True.
+  </li>
+  <li class="pending">
+    <span class="step-num">4</span>
+    <strong>Dev Spaces + OpenCode</strong> &mdash;
+    Install Dev Spaces operator, create CheCluster, build custom OpenCode image
+    pre-configured to use the cluster-internal model endpoint.
+  </li>
+  <li class="pending">
+    <span class="step-num">5</span>
+    <strong>Skills Repository</strong> &mdash;
+    Create Git repo with agent skills: clean-notes, create-report, create-slides,
+    sa-reviewer. Auto-clone via devfile.
+  </li>
+  <li class="pending">
+    <span class="step-num">6</span>
+    <strong>Devfile + Workspace Config</strong> &mdash;
+    Create devfile that uses OpenCode image, auto-clones skills repo,
+    and configures MCP servers.
+  </li>
+  <li class="pending">
+    <span class="step-num">7</span>
+    <strong>End-to-End Test</strong> &mdash;
+    Browser login, workspace startup, OpenCode agent, skills execution,
+    model inference &mdash; full flow validation.
+  </li>
+  <li class="pending">
+    <span class="step-num">8</span>
+    <strong>Demo Preparation</strong> &mdash;
+    Create cheat sheet and talking points for Synapxe meeting (week of July 13).
+  </li>
+</ul>
+
+<h2>Step 3 Detail: Model Serving Setup</h2>
+
+<h3>3a. Patch KServe to Headed Mode</h3>
+<div class="card info">
+  <div class="card-title">Why Headed mode?</div>
+  Headed mode enables Gateway API integration with llm-d routing.
+  Headless mode (default) only supports basic KNative serving without intelligent routing.
+</div>
+<pre><code>oc patch dsc default-dsc --type=merge \
+  -p '{"spec":{"components":{"kserve":{"rawDeploymentServiceConfig":"Headed"}}}}'</code></pre>
+
+<h3>3b. Create Namespace and Prerequisites</h3>
+<pre><code># Namespace
+oc create namespace ai-serving
+
+# PVC for model cache (persists across pod restarts)
+oc apply -f - &lt;&lt;'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache
+  namespace: ai-serving
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: gp3-csi
+EOF
+
+# HuggingFace token for model download
+oc create secret generic hf-token \
+  --namespace=ai-serving \
+  --from-literal=token=YOUR_HF_TOKEN</code></pre>
+
+<h3>3c. TLS Certificate and Gateway</h3>
+<pre><code># Generate self-signed cert
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+  -keyout /tmp/tls.key -out /tmp/tls.crt \
+  -subj "/CN=llm-d-gateway" \
+  -addext "subjectAltName=DNS:llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local"
+
+# Create TLS secret
+oc create secret tls llm-d-gateway-tls \
+  --namespace=ai-serving \
+  --cert=/tmp/tls.crt --key=/tmp/tls.key
+
+# Create Gateway
+oc apply -f - &lt;&lt;'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: llm-d-gateway
+  namespace: ai-serving
+spec:
+  gatewayClassName: data-science-gateway-class
+  listeners:
+  - name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: llm-d-gateway-tls
+EOF</code></pre>
+
+<h3>3d. LLMInferenceService</h3>
+<div class="card warning">
+  <div class="card-title">API Version: v1alpha2</div>
+  The cluster runs RHOAI 3.3 which uses <code>serving.kserve.io/v1alpha2</code>.
+  Manu's repo uses v1alpha1 &mdash; fields were renamed:
+  <code>modelSpec</code>&rarr;<code>model</code>,
+  <code>routerSpec</code>&rarr;<code>router</code>,
+  <code>workloadSpec.template.spec</code>&rarr;<code>template</code>.
+  Always verify with <code>oc explain</code>.
+</div>
+<pre><code>oc apply -f llminferenceservice.yaml</code></pre>
+<p>See <code>llminferenceservice.yaml</code> in this directory for the full manifest.</p>
+
+<h3>Verification Commands</h3>
+<pre><code># Check LLMInferenceService status
+oc get llminferenceservice -n ai-serving
+
+# Check pods
+oc get pods -n ai-serving
+
+# Check all prerequisites
+oc get ns ai-serving
+oc get pvc -n ai-serving
+oc get secret hf-token llm-d-gateway-tls -n ai-serving
+oc get gateway -n ai-serving
+oc get httproute -n ai-serving
+
+# Check model logs
+oc logs -f -n ai-serving -l app.kubernetes.io/name=qwen3-coder -c main</code></pre>
+
+<h3>Endpoints</h3>
+<table>
+  <tr><th>Type</th><th>URL</th></tr>
+  <tr>
+    <td>External (ELB)</td>
+    <td><code>https://&lt;elb-address&gt;/ai-serving/qwen3-coder</code></td>
+  </tr>
+  <tr>
+    <td>Internal (cluster)</td>
+    <td><code>https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/ai-serving/qwen3-coder</code></td>
+  </tr>
+</table>
+
+<h2>Issues Encountered and Resolutions</h2>
+
+<div class="card error">
+  <div class="card-title">Issue 1: v1alpha1 vs v1alpha2 Schema Mismatch</div>
+  <p><strong>Symptom:</strong> <code>invalid model URI: </code> (empty URI)</p>
+  <p><strong>Root cause:</strong> Manu's YAML uses v1alpha1 fields (<code>modelSpec</code>, <code>routerSpec</code>) which don't map to v1alpha2 (<code>model</code>, <code>router</code>).</p>
+  <p><strong>Fix:</strong> Rewrote YAML to v1alpha2 schema using <code>oc explain llminferenceservice.spec</code>.</p>
+</div>
+
+<div class="card error">
+  <div class="card-title">Issue 2: EPP EndpointPickerConfig Not Recognized</div>
+  <p><strong>Symptom:</strong> Scheduler pod CrashLoopBackOff &mdash; <code>no kind "EndpointPickerConfig" is registered for version "epp.llm-d.ai/v1alpha1"</code></p>
+  <p><strong>Root cause:</strong> The EPP binary on RHOAI 3.3 uses a different config API version than Manu's repo.</p>
+  <p><strong>Fix:</strong> Removed custom <code>scheduler.config</code> section. Controller uses default EPP config. With 1 replica, EPP scoring is not needed.</p>
+</div>
+
+<div class="card error">
+  <div class="card-title">Issue 3: TLS Certificate CN Too Long</div>
+  <p><strong>Symptom:</strong> <code>ASN1_mbstring_ncopy:string too long:maxsize=64</code></p>
+  <p><strong>Root cause:</strong> Full DNS hostname exceeded 64-char CN limit.</p>
+  <p><strong>Fix:</strong> Used short CN (<code>/CN=llm-d-gateway</code>) with full hostname in SAN extension.</p>
+</div>
+
+<div class="card error">
+  <div class="card-title">Issue 4: TLS Job Permission Error</div>
+  <p><strong>Symptom:</strong> <code>Failed to create: /var/cache/yum/metadata</code> in UBI container.</p>
+  <p><strong>Fix:</strong> Generated TLS cert locally with <code>openssl</code> and created secret directly via <code>oc create secret tls</code>.</p>
+</div>
+
+<h2>Key Learnings</h2>
+<div class="learning-box">
+  <ul>
+    <li>Always check CRD API version with <code>oc explain &lt;resource&gt;.spec</code> before applying YAMLs from external repos</li>
+    <li>RHOAI GUI cannot set nodeSelector, tolerations, PVC mounts, probe timeouts, or EPP scorer weights</li>
+    <li>v1alpha2 significantly flattened the LLMInferenceService schema</li>
+    <li>Permission denied warnings during HF model download are cosmetic (non-root container, <code>chmod</code> fails but write succeeds)</li>
+    <li>EPP config API version differs between llm-d releases &mdash; remove custom config for defaults when version mismatches</li>
+    <li>Model cached on PVC loads in seconds on subsequent deployments vs minutes for initial download</li>
+  </ul>
+</div>
+
+<h2>Request Flow</h2>
+<div class="arch-diagram">
+Current (1 replica, no EPP):
+
+  Client ──▶ llm-d Gateway (Envoy) ──▶ HTTPRoute ──▶ vLLM Pod (Qwen3-Coder-30B)
+
+Scaled (N replicas, with EPP):
+
+  Client ──▶ llm-d Gateway (Envoy) ──▶ EPP Scheduler ──┬──▶ vLLM Pod 1
+                                         (picks best    ├──▶ vLLM Pod 2
+                                          replica)      └──▶ vLLM Pod N
+
+  EPP Scoring:
+  - Prefix cache affinity (weight 3) ── reuse cached prompt prefixes
+  - KV cache utilization  (weight 2) ── pick replica with most free memory
+  - Queue depth           (weight 2) ── pick replica with shortest queue
+</div>
+
+<h2>References</h2>
+<table>
+  <tr><th>Resource</th><th>Link</th></tr>
+  <tr><td>Manu Joy's Repo</td><td><a href="https://github.com/manujoy7/Private_AI_Coding_Assistant">github.com/manujoy7/Private_AI_Coding_Assistant</a></td></tr>
+  <tr><td>Qwen3-Coder-30B Model</td><td><a href="https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8">huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8</a></td></tr>
+  <tr><td>KServe LLMInferenceService</td><td><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/">Red Hat OpenShift AI Docs</a></td></tr>
+  <tr><td>llm-d Project</td><td><a href="https://github.com/llm-d/llm-d">github.com/llm-d/llm-d</a></td></tr>
+</table>
+
+<div class="footer">
+  <p>Created: July 3, 2026 | Next session: Fix EPP (if needed), Dev Spaces + OpenCode, Skills, Demo Prep</p>
+  <p>Chat references: <code>4a7a8e85-e5f7-464f-9e8f-57bbb3e5cbaf</code> (this session), <code>3a704b6a-7f9d-4f68-91cf-8d05c22df4cb</code> (OpenCode/DevSpaces prototype)</p>
+</div>
+
+</body>
+</html>

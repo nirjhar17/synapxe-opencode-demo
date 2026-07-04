@@ -1,0 +1,74 @@
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: qwen3-coder
+  namespace: ai-serving
+  annotations:
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: Qwen3 Coder 30B
+    security.opendatahub.io/enable-auth: "false"
+spec:
+  model:
+    uri: hf://Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+    name: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+  replicas: 1
+  router:
+    gateway:
+      refs:
+      - name: llm-d-gateway
+        namespace: ai-serving
+    route: {}
+  template:
+    containers:
+    - name: main
+      env:
+      - name: VLLM_ADDITIONAL_ARGS
+        value: >-
+          --disable-uvicorn-access-log
+          --max-model-len 32768
+          --gpu-memory-utilization 0.90
+          --enable-prefix-caching
+          --enable-auto-tool-choice
+          --tool-call-parser qwen3_coder
+          --reasoning-parser qwen3
+          --kv-cache-dtype fp8
+      volumeMounts:
+      - name: kserve-provision-location
+        mountPath: /mnt/models
+      resources:
+        requests:
+          cpu: "4"
+          memory: 48Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "4"
+          memory: 48Gi
+          nvidia.com/gpu: "1"
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        initialDelaySeconds: 300
+        periodSeconds: 30
+        timeoutSeconds: 30
+        failureThreshold: 10
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        initialDelaySeconds: 120
+        periodSeconds: 15
+        timeoutSeconds: 10
+        failureThreshold: 5
+    volumes:
+    - name: kserve-provision-location
+      persistentVolumeClaim:
+        claimName: model-cache
+    nodeSelector:
+      node.kubernetes.io/instance-type: g6e.2xlarge
+    tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
