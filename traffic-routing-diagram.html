@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Private AI Coding Assistant - Traffic Routing &amp; Gateway Fix</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f1117; color: #e0e0e0; padding: 2rem; }
+  h1 { font-size: 1.8rem; color: #fff; margin-bottom: 0.3rem; }
+  .subtitle { color: #888; font-size: 0.95rem; margin-bottom: 2rem; }
+  .section { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+  .section h2 { font-size: 1.3rem; color: #60a5fa; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+  .section h3 { font-size: 1.05rem; color: #c084fc; margin: 1.2rem 0 0.6rem 0; }
+
+  /* Diagram */
+  .diagram-container { overflow-x: auto; padding: 1rem 0; }
+  svg { display: block; margin: 0 auto; }
+  .node { cursor: default; }
+  .node rect, .node ellipse { stroke-width: 2; }
+  .label { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; fill: #e0e0e0; }
+  .label-sm { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 10px; fill: #999; }
+  .label-title { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; fill: #fff; font-weight: 600; }
+  .arrow { stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+  .arrow-broken { stroke-width: 2; fill: none; stroke-dasharray: 6,4; marker-end: url(#arrowhead-red); }
+  .arrow-fix { stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-green); }
+
+  /* Issue/Fix cards */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 900px) { .card-grid { grid-template-columns: 1fr; } }
+  .card { background: #12141c; border: 1px solid #2a2d3a; border-radius: 10px; padding: 1.5rem; }
+  .card.issue { border-left: 4px solid #ef4444; }
+  .card.fix { border-left: 4px solid #22c55e; }
+  .card h3 { margin-top: 0; }
+  .card p, .card li { font-size: 0.9rem; line-height: 1.6; color: #bbb; }
+  .card ul { padding-left: 1.2rem; }
+  .card li { margin-bottom: 0.3rem; }
+  .card code { background: #262a36; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #f59e0b; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+  /* Code blocks */
+  .codeblock { background: #0d0f15; border: 1px solid #2a2d3a; border-radius: 8px; padding: 1rem 1.2rem; margin: 0.8rem 0; overflow-x: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.82rem; line-height: 1.7; color: #a5f3fc; white-space: pre; }
+  .codeblock .comment { color: #6b7280; }
+  .codeblock .key { color: #c084fc; }
+  .codeblock .val { color: #86efac; }
+  .codeblock .cmd { color: #f59e0b; }
+
+  /* Flow steps */
+  .flow { display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; margin: 1rem 0; }
+  .flow-step { flex: 1; min-width: 140px; background: #12141c; border: 1px solid #2a2d3a; padding: 1rem; text-align: center; position: relative; }
+  .flow-step:first-child { border-radius: 10px 0 0 10px; }
+  .flow-step:last-child { border-radius: 0 10px 10px 0; }
+  .flow-step .num { display: inline-block; background: #3b82f6; color: #fff; width: 24px; height: 24px; border-radius: 50%; font-size: 0.75rem; line-height: 24px; margin-bottom: 0.4rem; }
+  .flow-step .step-title { font-size: 0.85rem; color: #fff; font-weight: 600; margin-bottom: 0.3rem; }
+  .flow-step .step-detail { font-size: 0.75rem; color: #888; }
+  .flow-step.broken .num { background: #ef4444; }
+  .flow-step.fixed .num { background: #22c55e; }
+  .flow-arrow { display: flex; align-items: center; color: #555; font-size: 1.2rem; padding: 0 0.2rem; }
+
+  /* Legend */
+  .legend { display: flex; gap: 2rem; flex-wrap: wrap; margin: 1rem 0; font-size: 0.85rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-line { width: 30px; height: 3px; border-radius: 2px; }
+  .legend-line.green { background: #22c55e; }
+  .legend-line.red { background: #ef4444; }
+  .legend-line.blue { background: #3b82f6; }
+  .legend-line.yellow { background: #f59e0b; }
+  .legend-line.dashed { background: repeating-linear-gradient(90deg, #ef4444 0, #ef4444 6px, transparent 6px, transparent 10px); }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 0.3rem; }
+  .tag-red { background: #451a1a; color: #fca5a5; border: 1px solid #7f1d1d; }
+  .tag-green { background: #14332a; color: #86efac; border: 1px solid #166534; }
+  .tag-blue { background: #172554; color: #93c5fd; border: 1px solid #1e40af; }
+  .tag-yellow { background: #422006; color: #fcd34d; border: 1px solid #92400e; }
+
+  table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.6rem 1rem; background: #12141c; color: #60a5fa; border-bottom: 2px solid #2a2d3a; }
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid #1e2130; color: #bbb; }
+  tr:hover td { background: #1e2130; }
+</style>
+</head>
+<body>
+
+<h1>Private AI Coding Assistant &mdash; Traffic Routing Architecture</h1>
+<p class="subtitle">Synapxe Demo &bull; ROSA HCP 4.21 &bull; OpenShift AI 3.4.2 &bull; July 4, 2026</p>
+
+<!-- ============================================================ -->
+<!-- ARCHITECTURE DIAGRAM -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>End-to-End Traffic Flow</h2>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line green"></div> Working path (after fix)</div>
+    <div class="legend-item"><div class="legend-line dashed"></div> Broken path (before fix)</div>
+    <div class="legend-item"><div class="legend-line blue"></div> Internal cluster traffic</div>
+    <div class="legend-item"><div class="legend-line yellow"></div> TLS termination</div>
+  </div>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 1100 620" width="1100" height="620" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/></marker>
+        <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/></marker>
+        <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/></marker>
+        <marker id="arrowhead-yellow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/></marker>
+      </defs>
+
+      <!-- Background boxes for namespaces -->
+      <rect x="20" y="10" width="260" height="230" rx="12" fill="#111827" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="35" y="35" class="label-sm" fill="#3b82f6">namespace: cluster-admin-devspaces</text>
+
+      <rect x="330" y="10" width="380" height="440" rx="12" fill="#111827" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="345" y="35" class="label-sm" fill="#3b82f6">namespace: ai-serving</text>
+
+      <rect x="760" y="10" width="320" height="300" rx="12" fill="#111827" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="775" y="35" class="label-sm" fill="#3b82f6">namespace: ai-serving (model pod)</text>
+
+      <!-- Dev Spaces Workspace -->
+      <rect x="40" y="55" width="220" height="80" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+      <text x="90" y="80" class="label-title">Dev Spaces</text>
+      <text x="62" y="98" class="label-sm">Workspace Pod</text>
+      <text x="60" y="116" class="label-sm" fill="#22c55e">quay.io/njajodia/devspaces-opencode</text>
+
+      <!-- OpenCode inside workspace -->
+      <rect x="55" y="150" width="190" height="70" rx="6" fill="#172554" stroke="#60a5fa" stroke-width="1.5"/>
+      <text x="102" y="173" class="label-title" fill="#93c5fd">OpenCode</text>
+      <text x="68" y="192" class="label-sm" fill="#60a5fa">TUI + Web UI (:4096)</text>
+      <text x="65" y="207" class="label-sm" fill="#888">baseURL: .../ai-serving/qwen3-coder/v1</text>
+
+      <!-- Arrow: OpenCode -> Gateway -->
+      <line x1="245" y1="185" x2="350" y2="185" class="arrow-fix" stroke="#22c55e"/>
+      <text x="260" y="178" class="label-sm" fill="#22c55e">HTTPS</text>
+
+      <!-- Gateway (Envoy) -->
+      <rect x="355" y="55" width="340" height="110" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+      <text x="420" y="80" class="label-title" fill="#fcd34d">llm-d Gateway</text>
+      <text x="380" y="100" class="label-sm" fill="#f59e0b">Envoy Proxy (Istio)</text>
+      <text x="370" y="118" class="label-sm">data-science-gateway-class</text>
+      <text x="370" y="136" class="label-sm" fill="#888">Port 443 (TLS Terminate) &rarr; LoadBalancer</text>
+      <text x="370" y="152" class="label-sm" fill="#888">Self-signed cert: llm-d-gateway-tls</text>
+
+      <!-- AuthPolicy box -->
+      <rect x="355" y="175" width="160" height="55" rx="6" fill="#14332a" stroke="#22c55e" stroke-width="1"/>
+      <text x="370" y="195" class="label-sm" fill="#86efac">AuthPolicy</text>
+      <text x="370" y="210" class="label-sm" fill="#86efac">anonymous: {}</text>
+      <text x="370" y="225" class="label-sm" fill="#888">enable-auth: false</text>
+
+      <!-- HTTPRoute box -->
+      <rect x="530" y="175" width="165" height="75" rx="6" fill="#1e1b4b" stroke="#a78bfa" stroke-width="1"/>
+      <text x="545" y="195" class="label-sm" fill="#c4b5fd">HTTPRoute (auto-gen)</text>
+      <text x="545" y="212" class="label-sm" fill="#a78bfa">/ai-serving/qwen3-coder/*</text>
+      <text x="545" y="229" class="label-sm" fill="#888">URLRewrite &rarr; /v1/*</text>
+      <text x="545" y="246" class="label-sm" fill="#888">backendRef: workload-svc:8000</text>
+
+      <!-- DestinationRule box (THE FIX) -->
+      <rect x="355" y="265" width="340" height="75" rx="8" fill="#0c1a0c" stroke="#22c55e" stroke-width="2.5"/>
+      <text x="375" y="287" class="label-title" fill="#22c55e">DestinationRule (THE FIX)</text>
+      <text x="375" y="305" class="label-sm" fill="#86efac">tls.mode: SIMPLE</text>
+      <text x="375" y="320" class="label-sm" fill="#86efac">caCert: service-ca.crt</text>
+      <text x="540" y="305" class="label-sm" fill="#4ade80">h2UpgradePolicy: DO_NOT_UPGRADE</text>
+      <text x="540" y="320" class="label-sm" fill="#fcd34d">&larr; Forces HTTP/1.1 upstream</text>
+
+      <!-- Arrow: Gateway -> vLLM (working) -->
+      <line x1="695" y1="105" x2="780" y2="105" class="arrow-fix" stroke="#22c55e"/>
+      <text x="710" y="95" class="label-sm" fill="#22c55e">HTTPS</text>
+      <text x="710" y="123" class="label-sm" fill="#4ade80">HTTP/1.1</text>
+
+      <!-- vLLM Pod -->
+      <rect x="780" y="55" width="280" height="130" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+      <text x="845" y="80" class="label-title" fill="#d8b4fe">vLLM Model Server</text>
+      <text x="800" y="100" class="label-sm" fill="#a78bfa">Qwen3-Coder-30B-A3B-Instruct-FP8</text>
+      <text x="800" y="118" class="label-sm">Pod: qwen3-coder-kserve-*</text>
+      <text x="800" y="136" class="label-sm" fill="#888">Port 8000 (HTTPS, uvicorn)</text>
+      <text x="800" y="154" class="label-sm" fill="#888">TLS cert: /var/run/kserve/tls/</text>
+      <text x="800" y="172" class="label-sm" fill="#888">Signed by: openshift-service-serving-signer</text>
+
+      <!-- Service -->
+      <rect x="820" y="210" width="220" height="45" rx="6" fill="#172554" stroke="#60a5fa" stroke-width="1.5"/>
+      <text x="840" y="232" class="label-sm" fill="#93c5fd">svc: qwen3-coder-kserve-workload-svc</text>
+      <text x="840" y="247" class="label-sm" fill="#888">ClusterIP :8000</text>
+
+      <!-- Arrow: Service -> Pod -->
+      <line x1="930" y1="210" x2="930" y2="190" class="arrow" stroke="#3b82f6"/>
+
+      <!-- GPU Node info -->
+      <rect x="780" y="270" width="280" height="30" rx="4" fill="#422006" stroke="#92400e" stroke-width="1"/>
+      <text x="800" y="290" class="label-sm" fill="#fcd34d">GPU Node: g6e.2xlarge (NVIDIA L40S 48GB)</text>
+
+      <!-- BROKEN PATH (before fix) -->
+      <rect x="40" y="330" width="660" height="270" rx="12" fill="#1c0c0c" stroke="#7f1d1d" stroke-width="1"/>
+      <text x="60" y="358" class="label-title" fill="#fca5a5">BEFORE FIX (Broken Path)</text>
+
+      <!-- Broken flow -->
+      <rect x="60" y="375" width="150" height="45" rx="6" fill="#1e293b" stroke="#6b7280" stroke-width="1"/>
+      <text x="82" y="403" class="label-sm">OpenCode request</text>
+
+      <line x1="210" y1="397" x2="260" y2="397" class="arrow-broken" stroke="#ef4444"/>
+
+      <rect x="260" y="375" width="180" height="45" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+      <text x="278" y="393" class="label-sm" fill="#f59e0b">Gateway (Envoy)</text>
+      <text x="278" y="408" class="label-sm">TLS Terminate :443</text>
+
+      <line x1="440" y1="397" x2="490" y2="397" class="arrow-broken" stroke="#ef4444"/>
+      <text x="443" y="388" class="label-sm" fill="#ef4444">HTTP/2 (h2)</text>
+
+      <rect x="490" y="375" width="180" height="45" rx="6" fill="#451a1a" stroke="#ef4444" stroke-width="2"/>
+      <text x="510" y="393" class="label-sm" fill="#fca5a5">vLLM (uvicorn)</text>
+      <text x="510" y="408" class="label-sm" fill="#ef4444">HTTPS :8000 (HTTP/1.1 only)</text>
+
+      <text x="60" y="448" class="label-sm" fill="#fca5a5">What happened:</text>
+      <text x="60" y="466" class="label-sm" fill="#999">1. Client sends HTTPS request to Gateway on port 443</text>
+      <text x="60" y="484" class="label-sm" fill="#999">2. Gateway terminates TLS (using self-signed llm-d-gateway-tls cert)</text>
+      <text x="60" y="502" class="label-sm" fill="#999">3. DestinationRule tells Envoy to re-encrypt with TLS SIMPLE to backend</text>
+      <text x="60" y="520" class="label-sm" fill="#ef4444">4. Envoy negotiates ALPN and attempts HTTP/2 (h2) to vLLM backend</text>
+      <text x="60" y="538" class="label-sm" fill="#ef4444">5. vLLM (uvicorn) only supports HTTP/1.1 &mdash; resets the h2 connection</text>
+      <text x="60" y="556" class="label-sm" fill="#ef4444">6. Gateway returns 503 DR http2.remote_reset</text>
+      <text x="60" y="574" class="label-sm" fill="#ef4444">7. OpenCode gets no response &mdash; model appears unresponsive</text>
+
+      <!-- FIXED PATH label -->
+      <rect x="760" y="330" width="320" height="270" rx="12" fill="#0c1c0c" stroke="#166534" stroke-width="1"/>
+      <text x="780" y="358" class="label-title" fill="#86efac">AFTER FIX (Working Path)</text>
+
+      <text x="780" y="383" class="label-sm" fill="#86efac">Fix applied:</text>
+      <text x="780" y="401" class="label-sm" fill="#999">Patched DestinationRule to add:</text>
+
+      <rect x="790" y="413" width="270" height="50" rx="6" fill="#172554" stroke="#22c55e" stroke-width="1.5"/>
+      <text x="810" y="433" class="label-sm" fill="#4ade80">connectionPool:</text>
+      <text x="810" y="450" class="label-sm" fill="#4ade80">  http.h2UpgradePolicy: DO_NOT_UPGRADE</text>
+
+      <text x="780" y="490" class="label-sm" fill="#999">This forces Envoy to use HTTP/1.1</text>
+      <text x="780" y="508" class="label-sm" fill="#999">when connecting upstream to vLLM.</text>
+      <text x="780" y="536" class="label-sm" fill="#86efac">Result:</text>
+      <text x="780" y="554" class="label-sm" fill="#999">Gateway &rarr; HTTP/1.1 + TLS &rarr; vLLM</text>
+      <text x="780" y="572" class="label-sm" fill="#4ade80">200 OK with model response</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DETAILED REQUEST FLOW -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Request Flow: OpenCode &rarr; Model (Step by Step)</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="num">1</div>
+      <div class="step-title">OpenCode</div>
+      <div class="step-detail">User types prompt in TUI/WebUI</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="num">2</div>
+      <div class="step-title">HTTPS Request</div>
+      <div class="step-detail">POST /ai-serving/qwen3-coder/v1/chat/completions<br>to gateway ClusterIP :443</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step" style="border-color: #f59e0b;">
+      <div class="num" style="background:#f59e0b;">3</div>
+      <div class="step-title">Gateway Envoy</div>
+      <div class="step-detail">TLS terminates<br>AuthPolicy: anonymous<br>HTTPRoute: URLRewrite strips prefix</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step fixed">
+      <div class="num">4</div>
+      <div class="step-title">DestinationRule</div>
+      <div class="step-detail">Re-encrypt with TLS SIMPLE<br>CA: service-ca.crt<br>Protocol: HTTP/1.1 (forced)</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step" style="border-color: #a855f7;">
+      <div class="num" style="background:#a855f7;">5</div>
+      <div class="step-title">vLLM (KServe)</div>
+      <div class="step-detail">Receives /v1/chat/completions<br>Runs inference on GPU<br>Returns completion JSON</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ISSUE & FIX DETAILS -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Issue &amp; Fix Details</h2>
+  <div class="card-grid">
+    <div class="card issue">
+      <h3 style="color:#fca5a5;">The Issue</h3>
+      <p>The llm-d Gateway (Envoy proxy) was unable to forward requests to the vLLM model server, causing OpenCode to hang with no response.</p>
+      <h3 style="color:#fca5a5;">Root Cause: HTTP/2 Protocol Mismatch</h3>
+      <ul>
+        <li>The Gateway terminates incoming TLS on port 443</li>
+        <li>A <code>DestinationRule</code> tells Envoy to re-encrypt traffic to the backend using TLS SIMPLE mode</li>
+        <li>During the upstream TLS handshake, Envoy negotiates <strong>ALPN</strong> and selects <strong>HTTP/2 (h2)</strong></li>
+        <li>vLLM runs on <strong>uvicorn</strong>, which only supports <strong>HTTP/1.1</strong> over TLS</li>
+        <li>vLLM rejects the HTTP/2 framing and sends a TCP RST</li>
+        <li>Envoy logs: <code>503 DR http2.remote_reset</code></li>
+        <li>OpenCode receives no response and the model appears dead</li>
+      </ul>
+      <h3 style="color:#fca5a5;">Gateway Logs (Before Fix)</h3>
+      <div class="codeblock"><span class="comment"># Every request to the gateway returned 503 with http2 reset</span>
+[2026-07-04T10:45:25] "<span class="cmd">GET /ai-serving/qwen3-coder/v1/models HTTP/2</span>" <span class="val" style="color:#ef4444;">503 DR http2.remote_reset</span>
+  - upstream: qwen3-coder-kserve-workload-svc.ai-serving.svc.cluster.local
+  - response_flags: DR (Downstream Reset)</div>
+    </div>
+
+    <div class="card fix">
+      <h3 style="color:#86efac;">The Fix</h3>
+      <p>Patched the <code>DestinationRule</code> to force HTTP/1.1 for all upstream connections to the vLLM backend service.</p>
+      <h3 style="color:#86efac;">Command Applied</h3>
+      <div class="codeblock"><span class="cmd">oc patch</span> destinationrule qwen3-coder-kserve-workload-svc \
+  -n ai-serving --type=merge -p '{
+  "<span class="key">spec</span>": {
+    "<span class="key">trafficPolicy</span>": {
+      "<span class="key">connectionPool</span>": {
+        "<span class="key">http</span>": {
+          "<span class="key">h2UpgradePolicy</span>": "<span class="val">DO_NOT_UPGRADE</span>"
+        }
+      }
+    }
+  }
+}'</div>
+      <h3 style="color:#86efac;">What This Does</h3>
+      <ul>
+        <li><code>h2UpgradePolicy: DO_NOT_UPGRADE</code> tells Envoy to never upgrade connections to HTTP/2 when connecting to the backend</li>
+        <li>Envoy now connects to vLLM using <strong>HTTP/1.1 over TLS</strong></li>
+        <li>vLLM (uvicorn) accepts HTTP/1.1 perfectly</li>
+        <li>The existing TLS SIMPLE config with <code>service-ca.crt</code> still handles encryption</li>
+      </ul>
+      <h3 style="color:#86efac;">Verification</h3>
+      <div class="codeblock"><span class="comment"># After the fix, the gateway returns 200 with model data</span>
+$ curl -sk https://llm-d-gateway-.../ai-serving/qwen3-coder/v1/models
+<span class="val">{"object":"list","data":[{"id":"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",...}]}</span>
+
+$ curl -sk -X POST .../v1/chat/completions \
+    -d '{"model":"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8","messages":[...]}'
+<span class="val">{"choices":[{"message":{"reasoning":"Hello!"}}]}</span> <span class="comment"># Model responds!</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- COMPONENT INVENTORY -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Component Inventory</h2>
+  <table>
+    <thead>
+      <tr><th>Component</th><th>Resource</th><th>Namespace</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-blue">Gateway</span> llm-d-gateway</td>
+        <td>Gateway (gateway.networking.k8s.io/v1)</td>
+        <td>ai-serving</td>
+        <td>Envoy proxy, TLS termination on :443, LoadBalancer</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">HTTPRoute</span> qwen3-coder-kserve-route</td>
+        <td>HTTPRoute (auto-generated by KServe)</td>
+        <td>ai-serving</td>
+        <td>Routes /ai-serving/qwen3-coder/* with URLRewrite to /v1/*</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-green">AuthPolicy</span> qwen3-coder-kserve-route-authn</td>
+        <td>AuthPolicy (kuadrant.io/v1)</td>
+        <td>ai-serving</td>
+        <td>Anonymous access (enable-auth: false)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-yellow">AuthPolicy</span> llm-d-gateway-authn</td>
+        <td>AuthPolicy (kuadrant.io/v1)</td>
+        <td>ai-serving</td>
+        <td>Gateway-level auth (Kubernetes token), overridden by route policy</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-green">DestinationRule</span> qwen3-coder-kserve-workload-svc</td>
+        <td>DestinationRule (networking.istio.io/v1)</td>
+        <td>ai-serving</td>
+        <td>TLS SIMPLE + h2UpgradePolicy: DO_NOT_UPGRADE (the fix)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">LLMInferenceService</span> qwen3-coder</td>
+        <td>LLMInferenceService (serving.kserve.io/v1alpha2)</td>
+        <td>ai-serving</td>
+        <td>Orchestrates model deployment, creates all child resources</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Deployment</span> qwen3-coder-kserve</td>
+        <td>Deployment (apps/v1)</td>
+        <td>ai-serving</td>
+        <td>vLLM model server pod (1 replica on GPU node)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Service</span> qwen3-coder-kserve-workload-svc</td>
+        <td>Service (ClusterIP)</td>
+        <td>ai-serving</td>
+        <td>Internal service for vLLM pod on port 8000</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Secret</span> llm-d-gateway-tls</td>
+        <td>Secret (kubernetes.io/tls)</td>
+        <td>ai-serving</td>
+        <td>Self-signed TLS cert for gateway frontend</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">PVC</span> model-cache</td>
+        <td>PersistentVolumeClaim (100Gi gp3)</td>
+        <td>ai-serving</td>
+        <td>Cached model weights at /mnt/models</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Dev Spaces</span> Workspace</td>
+        <td>Pod in cluster-admin-devspaces</td>
+        <td>cluster-admin-devspaces</td>
+        <td>Custom image with OpenCode CLI pre-installed</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- MANU vs OURS -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Manu's Config vs Our Config</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Manu (v1alpha1)</th><th>Ours (v1alpha2)</th><th>Impact</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>API Version</td>
+        <td><code>serving.kserve.io/v1alpha1</code></td>
+        <td><code>serving.kserve.io/v1alpha2</code></td>
+        <td>Different field names (modelSpec vs model, workloadSpec vs template)</td>
+      </tr>
+      <tr>
+        <td>Scheduler / EPP</td>
+        <td>Explicit <code>scheduler</code> section with EPP args, scorers, volumes</td>
+        <td>No scheduler field in v1alpha2 schema</td>
+        <td>No InferencePool created in our cluster</td>
+      </tr>
+      <tr>
+        <td>HTTPRoute</td>
+        <td>Custom <code>model-route</code> routing to InferencePool</td>
+        <td>Auto-generated by KServe, routes to Service directly</td>
+        <td>No EPP routing (prefix cache, KV cache scoring)</td>
+      </tr>
+      <tr>
+        <td>Gateway Ref</td>
+        <td><code>maas-default-gateway</code> in openshift-ingress</td>
+        <td><code>llm-d-gateway</code> in ai-serving</td>
+        <td>Different gateway configurations</td>
+      </tr>
+      <tr>
+        <td>Path Format</td>
+        <td>Clean: <code>/v1/chat/completions</code></td>
+        <td>Prefixed: <code>/ai-serving/qwen3-coder/v1/chat/completions</code></td>
+        <td>URLRewrite strips prefix before backend</td>
+      </tr>
+      <tr>
+        <td>Backend Protocol</td>
+        <td>Through InferencePool (EPP handles h2/h1)</td>
+        <td>Direct to Service (Envoy tried h2, failed)</td>
+        <td>Root cause of the 503 error</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- TLS CHAIN -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>TLS Certificate Chain</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="num" style="background:#f59e0b;">A</div>
+      <div class="step-title">Client &rarr; Gateway</div>
+      <div class="step-detail">Self-signed cert<br><code>CN=llm-d-gateway</code><br>Secret: llm-d-gateway-tls<br><code>NODE_TLS_REJECT_UNAUTHORIZED=0</code></div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="num" style="background:#f59e0b;">B</div>
+      <div class="step-title">Gateway &rarr; vLLM</div>
+      <div class="step-detail">Service-CA signed cert<br><code>Issuer: openshift-service-serving-signer</code><br><code>Subject: O=Kserve CA Signed</code><br>Verified via service-ca.crt</div>
+    </div>
+  </div>
+  <p style="margin-top:1rem;font-size:0.85rem;color:#888;">
+    Segment A uses a self-signed certificate (created manually). OpenCode skips verification via <code>NODE_TLS_REJECT_UNAUTHORIZED=0</code>.<br>
+    Segment B uses an OpenShift service-CA signed certificate (auto-managed by KServe). The DestinationRule verifies it using <code>/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt</code>.
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<!-- KEY YAML -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Key YAML: DestinationRule (After Fix)</h2>
+  <div class="codeblock"><span class="key">apiVersion</span>: networking.istio.io/v1
+<span class="key">kind</span>: DestinationRule
+<span class="key">metadata</span>:
+  <span class="key">name</span>: qwen3-coder-kserve-workload-svc
+  <span class="key">namespace</span>: ai-serving
+<span class="key">spec</span>:
+  <span class="key">exportTo</span>: ['*']
+  <span class="key">host</span>: qwen3-coder-kserve-workload-svc.ai-serving.svc.cluster.local
+  <span class="key">trafficPolicy</span>:
+    <span class="key">connectionPool</span>:               <span class="comment"># &larr; ADDED (the fix)</span>
+      <span class="key">http</span>:
+        <span class="key">h2UpgradePolicy</span>: <span class="val">DO_NOT_UPGRADE</span>  <span class="comment"># Forces HTTP/1.1 to backend</span>
+    <span class="key">tls</span>:
+      <span class="key">caCertificates</span>: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+      <span class="key">insecureSkipVerify</span>: <span class="val">false</span>
+      <span class="key">mode</span>: <span class="val">SIMPLE</span>
+      <span class="key">sni</span>: qwen3-coder-kserve-workload-svc.ai-serving.svc.cluster.local</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ISSUE 2: REASONING PARSER -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>Issue 2: Model Responds But OpenCode Shows Nothing</h2>
+  <div class="card-grid">
+    <div class="card issue">
+      <h3 style="color:#fca5a5;">The Issue</h3>
+      <p>After fixing the gateway routing, the model was reachable and responding. However, OpenCode displayed a blank response after "Thinking" &mdash; the user typed "hi" but got no visible output, just repeated "Thought" and "Compaction" cycles.</p>
+      <h3 style="color:#fca5a5;">Root Cause: Reasoning Parser Splitting Output</h3>
+      <ul>
+        <li>vLLM was launched with <code>--reasoning-parser qwen3</code> in the <code>VLLM_ADDITIONAL_ARGS</code></li>
+        <li>This flag tells vLLM to split Qwen3's output into two fields: <code>reasoning</code> (thinking tokens) and <code>content</code> (final answer)</li>
+        <li>Qwen3-Coder is a reasoning model &mdash; it puts its entire response inside the thinking block by default</li>
+        <li>Result: <code>"content": null</code> and <code>"reasoning": "Hi there! How can I help you?"</code></li>
+        <li>OpenCode only reads the <code>content</code> field &mdash; it sees <code>null</code> and displays nothing</li>
+      </ul>
+      <h3 style="color:#fca5a5;">API Response (Before Fix)</h3>
+      <div class="codeblock">{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      <span class="val" style="color:#ef4444;">"content": null,</span>                    <span class="comment">&larr; OpenCode reads this (empty!)</span>
+      <span class="val">"reasoning": "Hi there! How can I help you?"</span>  <span class="comment">&larr; Actual response is here</span>
+    }
+  }]
+}</div>
+      <h3 style="color:#fca5a5;">Additional Issue: Token Limit</h3>
+      <ul>
+        <li>OpenCode defaults to requesting <code>max_tokens: 32000</code> for custom providers</li>
+        <li>Model's <code>max_model_len</code> is 32768</li>
+        <li>Even a small prompt (769 input tokens) causes: <code>"you requested 32000 output tokens and your prompt contains at least 769 input tokens, for a total of at least 32769 tokens"</code></li>
+        <li>OpenCode kept retrying in an infinite "Compaction" loop</li>
+      </ul>
+    </div>
+
+    <div class="card fix">
+      <h3 style="color:#86efac;">The Fixes</h3>
+
+      <h3 style="color:#86efac;">Fix A: Remove Reasoning Parser from vLLM</h3>
+      <p>Removed <code>--reasoning-parser qwen3</code> from the LLMInferenceService so vLLM puts all output in the <code>content</code> field.</p>
+      <div class="codeblock"><span class="cmd">oc patch</span> llminferenceservice qwen3-coder -n ai-serving \
+  --type=json -p '[{
+    "op": "replace",
+    "path": "/spec/template/containers/0/env/0/value",
+    "value": "<span class="val">--disable-uvicorn-access-log --max-model-len 32768 --gpu-memory-utilization 0.90 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser qwen3_coder --kv-cache-dtype fp8</span>"
+  }]'
+
+<span class="comment"># Removed: --reasoning-parser qwen3</span>
+<span class="comment"># Kept:    --tool-call-parser qwen3_coder (tool calling still works)</span></div>
+
+      <h3 style="color:#86efac;">Fix B: Set Token Limits in OpenCode Config</h3>
+      <p>Added <code>limit</code> block to the model definition in <code>opencode.json</code> to cap output tokens at 8192.</p>
+      <div class="codeblock"><span class="comment">// ~/.config/opencode/opencode.json</span>
+"models": {
+  "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
+    "name": "Qwen3 Coder 30B (Private AI)",
+    <span class="val">"limit": {
+      "context": 32768,
+      "output": 8192
+    }</span>
+  }
+}</div>
+
+      <h3 style="color:#86efac;">API Response (After Fix)</h3>
+      <div class="codeblock">{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      <span class="val" style="color:#4ade80;">"content": "Hi there! How can I help you today?",</span>  <span class="comment">&larr; Response is here now!</span>
+      "reasoning": null
+    }
+  }]
+}</div>
+
+      <h3 style="color:#86efac;">Note on Reasoning Models</h3>
+      <ul>
+        <li>Qwen3-Coder supports a <code>/no_think</code> system prompt to disable thinking without removing the parser</li>
+        <li>However, removing the parser entirely is cleaner for OpenCode since it doesn't understand the <code>reasoning</code> field</li>
+        <li>Tool calling still works via <code>--tool-call-parser qwen3_coder</code> (separate from reasoning)</li>
+        <li>If reasoning/thinking is needed later, re-add <code>--reasoning-parser qwen3</code> and use a client that supports the <code>reasoning</code> field</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ALL FIXES SUMMARY -->
+<!-- ============================================================ -->
+<div class="section">
+  <h2>All Fixes Applied &mdash; Summary</h2>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Issue</th><th>Symptom</th><th>Root Cause</th><th>Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-red">1</span></td>
+        <td>Gateway 503</td>
+        <td>OpenCode hangs, no response at all</td>
+        <td>Envoy used HTTP/2 to vLLM backend (uvicorn supports HTTP/1.1 only)</td>
+        <td>Patched DestinationRule: <code>h2UpgradePolicy: DO_NOT_UPGRADE</code></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-red">2</span></td>
+        <td>Token limit exceeded</td>
+        <td>Infinite "Compaction" retry loop</td>
+        <td>OpenCode requests 32000 output tokens; model limit is 32768 total</td>
+        <td>Added <code>limit.output: 8192</code> in opencode.json</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-red">3</span></td>
+        <td>Empty response</td>
+        <td>"Thinking" shown but no visible answer</td>
+        <td><code>--reasoning-parser qwen3</code> puts output in <code>reasoning</code> field; OpenCode reads <code>content</code></td>
+        <td>Removed <code>--reasoning-parser qwen3</code> from vLLM args</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div style="text-align:center;color:#555;font-size:0.8rem;padding:2rem 0;">
+  Generated July 4, 2026 &bull; Synapxe Private AI Coding Assistant &bull; ROSA HCP 4.21 / OpenShift AI 3.4.2
+</div>
+
+</body>
+</html>

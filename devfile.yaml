@@ -27,13 +27,13 @@ components:
       sourceMapping: /projects
       env:
         - name: VLLM_ENDPOINT
-          value: "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/ai-serving/qwen3-coder/v1"
+          value: "https://maas-default-gateway-data-science-gateway-class.openshift-ingress.svc.cluster.local/ai-serving/qwen3-coder/v1"
         - name: VLLM_MODEL_ID
           value: "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"
         - name: OPENAI_API_KEY
           value: "EMPTY"
         - name: OPENAI_BASE_URL
-          value: "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/ai-serving/qwen3-coder/v1"
+          value: "https://maas-default-gateway-data-science-gateway-class.openshift-ingress.svc.cluster.local/ai-serving/qwen3-coder/v1"
         - name: NODE_TLS_REJECT_UNAUTHORIZED
           value: "0"
         - name: OPENCODE_SERVER_PASSWORD
@@ -69,13 +69,17 @@ commands:
           "provider": {
             "vllm": {
               "npm": "@ai-sdk/openai-compatible",
-              "name": "Private AI Gateway (llm-d)",
+              "name": "Private AI Gateway (maas)",
               "options": {
-                "baseURL": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/ai-serving/qwen3-coder/v1"
+                "baseURL": "https://maas-default-gateway-data-science-gateway-class.openshift-ingress.svc.cluster.local/ai-serving/qwen3-coder/v1"
               },
               "models": {
                 "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
-                  "name": "Qwen3 Coder 30B (Private AI)"
+                  "name": "Qwen3 Coder 30B (Private AI)",
+                  "limit": {
+                    "context": 32768,
+                    "output": 8192
+                  }
                 }
               }
             }

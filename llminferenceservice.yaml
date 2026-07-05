@@ -15,8 +15,8 @@ spec:
   router:
     gateway:
       refs:
-      - name: llm-d-gateway
-        namespace: ai-serving
+      - name: maas-default-gateway
+        namespace: openshift-ingress
     route: {}
   template:
     containers:
