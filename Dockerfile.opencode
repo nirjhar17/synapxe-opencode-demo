@@ -7,6 +7,8 @@ RUN curl -fsSL https://opencode.ai/install | OPENCODE_VERSION=1.15.13 bash && \
     cp /home/user/.opencode/bin/opencode /usr/local/bin/opencode && \
     chmod 755 /usr/local/bin/opencode
 
+RUN pip3 install --no-cache-dir python-pptx
+
 # Accept self-signed TLS certs for cluster-internal endpoints
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
