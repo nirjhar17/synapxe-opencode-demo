@@ -31,6 +31,14 @@ Follow these steps in order:
 4. Execute the script to create the file.
 5. Tell the user the file path so they can download it.
 
+## Critical: Python Version
+
+ALWAYS use `python3.11` to run the script, NOT `python3`. The system python3 is too old. Example:
+
+```bash
+python3.11 build_slides.py
+```
+
 ## Slide Writing Rules
 
 - Headlines should be assertions, not labels. "Migration Cuts Deployment Time by 60%" is better than "Migration Results".
@@ -165,4 +173,5 @@ print("Saved: presentation.pptx")
 - Save the file in the current project directory.
 - File name should be descriptive: "migration-strategy.pptx" not "slides.pptx".
 - After saving, tell the user the exact file path and how to download it from Dev Spaces.
-- If python-pptx is not installed, run `pip3 install python-pptx` first.
+- If python-pptx is not installed, run `python3.11 -m pip install python-pptx` first.
+- ALWAYS use `python3.11` to run the script. NEVER use `python3` or `python`.
