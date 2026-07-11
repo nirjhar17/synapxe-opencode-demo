@@ -84,7 +84,15 @@ commands:
               }
             }
           },
-          "model": "vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"
+          "model": "vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "mcp": {
+            "synapxe-kb": {
+              "type": "remote",
+              "url": "https://mcp-gateway.apps.rosa.rhoai-lab.orwi.p3.openshiftapps.com/mcp",
+              "enabled": true,
+              "oauth": false
+            }
+          }
         }
         EOCFG
         cat > /home/user/.local/share/opencode/auth.json << 'EOAUTH'
